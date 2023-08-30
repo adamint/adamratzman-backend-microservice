@@ -1,4 +1,4 @@
-package com.adamratzman.komoot
+package com.adamratzman.api.komoot
 
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.runBlocking
