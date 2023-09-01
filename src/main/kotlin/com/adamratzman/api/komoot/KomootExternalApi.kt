@@ -1,6 +1,6 @@
 package com.adamratzman.api.komoot
 
-import com.adamratzman.activityDistancesByDayPerWeek
+import com.adamratzman.activityDistancesByWeek
 import com.adamratzman.api.PaginationRequest
 import com.adamratzman.api.PaginationResposne
 import com.adamratzman.api.isInvalidOffsetAndLimit
@@ -11,7 +11,6 @@ import io.ktor.server.application.*
 import io.ktor.server.response.*
 import io.ktor.server.routing.*
 import kotlinx.datetime.Instant
-import kotlinx.datetime.Month
 import kotlinx.datetime.TimeZone
 import kotlinx.datetime.toLocalDateTime
 import kotlinx.serialization.Serializable
@@ -23,7 +22,12 @@ fun Routing.komootExternalApi() {
         val toursByMonth = komootTours
             .associateWith { Instant.parse(it.date).toLocalDateTime(TimeZone.currentSystemDefault()) }
             .entries
-            .groupBy { MonthYearPair(it.value.month, it.value.year) }
+            .groupBy {
+                MonthYearPair(
+                    it.value.month.getDisplayName(TextStyle.FULL_STANDALONE, Locale.US),
+                    it.value.year
+                )
+            }
 
         val paginationParameters = call.parameters.receivePaginationApiCall(toursByMonth.size)
             ?: return@get call.respond(HttpStatusCode.BadRequest)
@@ -31,14 +35,16 @@ fun Routing.komootExternalApi() {
         val filteredPublicToursByMonth = toursByMonth
             .toList()
             .subList(paginationParameters.offset, paginationParameters.offset + paginationParameters.limit)
-            .map { ToursInMonthYear(
-                it.first,
-                it.second.map { pair -> pair.key.toPublicTour() },
-                it.second
-                    .groupBy { pair -> pair.key.sport.toKomootSportType(pair.key.name) }
-                    .map { pair -> pair.key to pair.value.sumOf { entry -> entry.key.distance } }
-                    .toMap()
-            ) }
+            .map {
+                ToursInMonthYear(
+                    it.first,
+                    it.second.map { pair -> pair.key.toPublicTour() },
+                    it.second
+                        .groupBy { pair -> pair.key.sport.toKomootSportType(pair.key.name) }
+                        .map { pair -> pair.key to pair.value.sumOf { entry -> entry.key.distance } }
+                        .toMap()
+                )
+            }
 
         val nextOffset = paginationParameters.offset + paginationParameters.limit
         val previousOffset = paginationParameters.offset - paginationParameters.limit
@@ -60,26 +66,28 @@ fun Routing.komootExternalApi() {
     }
 
     get("/activity-stats-by-week") {
-        val paginationParameters = call.parameters.receivePaginationApiCall(activityDistancesByDayPerWeek.size)
+        val paginationParameters = call.parameters.receivePaginationApiCall(activityDistancesByWeek.size)
             ?: return@get call.respond(HttpStatusCode.BadRequest)
 
-        val filteredWeeksData: List<Pair<WeekMonthYearPair, WeekActivityDistance>> = activityDistancesByDayPerWeek
+        val filteredWeeksData: List<Pair<WeekMonthYearPair, Map<SportType, Double>>> = activityDistancesByWeek
             .toList()
             .subList(paginationParameters.offset, paginationParameters.offset + paginationParameters.limit)
 
         val nextOffset = paginationParameters.offset + paginationParameters.limit
         val previousOffset = paginationParameters.offset - paginationParameters.limit
 
-        val next = if (isInvalidOffsetAndLimit(nextOffset, paginationParameters.limit, activityDistancesByDayPerWeek.size)) null
-        else PaginationRequest(nextOffset, paginationParameters.limit)
+        val next =
+            if (isInvalidOffsetAndLimit(nextOffset, paginationParameters.limit, activityDistancesByWeek.size)) null
+            else PaginationRequest(nextOffset, paginationParameters.limit)
 
-        val previous = if (isInvalidOffsetAndLimit(previousOffset, paginationParameters.limit, activityDistancesByDayPerWeek.size)) null
-        else PaginationRequest(previousOffset, paginationParameters.limit)
+        val previous =
+            if (isInvalidOffsetAndLimit(previousOffset, paginationParameters.limit, activityDistancesByWeek.size)) null
+            else PaginationRequest(previousOffset, paginationParameters.limit)
 
         call.respond(
             PaginationResposne(
                 data = filteredWeeksData,
-                total = activityDistancesByDayPerWeek.size,
+                total = activityDistancesByWeek.size,
                 next = next,
                 previous = previous
             )
@@ -96,7 +104,7 @@ data class ToursInMonthYear(
 )
 
 @Serializable
-data class MonthYearPair(val month: Month, val year: Int)
+data class MonthYearPair(val month: String, val year: Int)
 
 @Serializable
 data class WeekMonthYearPair(
@@ -141,10 +149,8 @@ data class PublicTourInfo(
     val bicycleInfo: SerializableBikeInfo?,
     val date: SerializableLocalDate,
     val mapImage: MapImage,
-    val elevation: RouteElevation,
-
-
-    )
+    val elevation: RouteElevation
+)
 
 fun Instant.toSerializable() = with(toLocalDateTime(TimeZone.currentSystemDefault())) {
     SerializableLocalDate(

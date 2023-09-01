@@ -139,14 +139,10 @@ fun String.toKomootSportType(name: String): SportType = when {
     this == "hiking" -> SportType.Hiking
     else -> SportType.Other
 }
-
-@Serializable
-data class WeekActivityDistance(val activityDistanceByDay: List<Pair<DayMonth, Map<SportType, Double>>>)
-
 @Serializable
 data class DayMonth(val day: Int, val month: Int)
 
-fun computeActivityDistancesByDayPerWeek(): SortedMap<WeekMonthYearPair, WeekActivityDistance> {
+fun computeActivityDistancesByWeek(): SortedMap<WeekMonthYearPair, Map<SportType, Double>> {
     val now = Clock.System.now()
     val startOfThisWeek = getStartOfWeekForInstant(now)
     val lastActivityEpochSeconds = komootTours.last().let { Instant.parse(it.date) }.epochSeconds
@@ -161,22 +157,14 @@ fun computeActivityDistancesByDayPerWeek(): SortedMap<WeekMonthYearPair, WeekAct
             val currentWeekEndLocalDateTime = currentWeek.plus(6.days).toLocalDateTime(TimeZone.currentSystemDefault())
 
             val dateRange = getWeekDateRangeForStartOfWeek(currentWeekStartLocalDateTime)
-            val toursInRange = toursWithLocalDateTime
+            val toursInRangeBySport = toursWithLocalDateTime
                 .filter { it.key.year * 365 + it.key.dayOfYear in dateRange }
+                .map { it.value }
+                .groupBy { it.sport.toKomootSportType(it.name) }
 
-            val activityDistanceByDay = (0..<6).map { day ->
-                val toursForDay = toursInRange
-                    .filter { it.key.year * 365 + it.key.dayOfYear == dateRange.first + day }
-
-                val dayDateTime = currentWeek.plus(day.days).toLocalDateTime(TimeZone.currentSystemDefault())
-
-                DayMonth(dayDateTime.dayOfMonth, dayDateTime.monthNumber) to toursForDay
-                    .map { it.value }
-                    .groupBy { it.sport.toKomootSportType(it.name) }
-                    .map { (sport, toursInSport) ->
-                        sport to toursInSport.sumOf { it.distance }
-                    }.toMap().toSortedMap()
-            }
+            val distanceBySportType: Map<SportType, Double> = toursInRangeBySport.map { (sportType, tours) ->
+                sportType to tours.sumOf { it.distance }
+            }.toMap()
 
             yield(
                 WeekMonthYearPair(
@@ -186,7 +174,7 @@ fun computeActivityDistancesByDayPerWeek(): SortedMap<WeekMonthYearPair, WeekAct
                     currentWeekEndLocalDateTime.month.value,
                     currentWeekStartLocalDateTime.year,
                     currentWeek.epochSeconds
-                ) to WeekActivityDistance(activityDistanceByDay)
+                ) to distanceBySportType
             )
 
             currentWeek = currentWeek.minus(7.days)

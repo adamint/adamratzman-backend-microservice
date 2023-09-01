@@ -29,14 +29,14 @@ val HttpClient = HttpClient {
 }
 
 var komootTours: List<Tour> = emptyList()
-var activityDistancesByDayPerWeek: SortedMap<WeekMonthYearPair, WeekActivityDistance> = sortedMapOf()
+var activityDistancesByWeek: SortedMap<WeekMonthYearPair, Map<SportType, Double>> = sortedMapOf()
 
 suspend fun main() {
     KomootApi.login()
     fixedRateTimer("Komoot Update", daemon = true, initialDelay = 0, period = 60.minutes.inWholeMilliseconds) {
         runBlocking {
             komootTours = KomootApi.getAllTours()
-            activityDistancesByDayPerWeek = computeActivityDistancesByDayPerWeek()
+            activityDistancesByWeek = computeActivityDistancesByWeek()
         }
     }
 
