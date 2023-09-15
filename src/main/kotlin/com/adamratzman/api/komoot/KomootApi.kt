@@ -123,7 +123,8 @@ enum class SportType {
 enum class BikeType(val isElectric: Boolean) {
     Propella_7S(true),
     Specialized_Turbo_Vado(true),
-    Cervelo(false);
+    Cervelo_SLC_SL(false),
+    REI_CO_OP_GENERATION_E(true);
 
     val serializableBikeInfo = SerializableBikeInfo(name, isElectric)
 }

@@ -60,7 +60,7 @@ ktor {
         ))
 
         localImageName.set("adamratzman.com-backend")
-        imageTag = "1.5"
+        imageTag = "1.7"
 
         externalRegistry.set(
             io.ktor.plugin.features.DockerImageRegistry.dockerHub(

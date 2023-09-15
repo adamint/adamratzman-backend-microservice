@@ -172,7 +172,8 @@ fun Tour.toPublicTour(): PublicTourInfo {
 
         return when {
             name.endsWith("(P)") -> name.removeSuffix("(P)").trim() to BikeType.Propella_7S.serializableBikeInfo
-            name.endsWith("(R)") -> name.removeSuffix("(R)").trim() to BikeType.Cervelo.serializableBikeInfo
+            name.endsWith("(R)") -> name.removeSuffix("(R)").trim() to BikeType.Cervelo_SLC_SL.serializableBikeInfo
+            name.endsWith("(C)") -> name.removeSuffix("(C)").trim() to BikeType.REI_CO_OP_GENERATION_E.serializableBikeInfo
             else -> name to BikeType.Specialized_Turbo_Vado.serializableBikeInfo
         }
     }
