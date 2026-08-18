@@ -60,7 +60,7 @@ ktor {
         ))
 
         localImageName.set("adamratzman.com-backend")
-        imageTag = "1.7"
+        imageTag = "1.8"
 
         externalRegistry.set(
             io.ktor.plugin.features.DockerImageRegistry.dockerHub(
@@ -69,5 +69,23 @@ ktor {
                 password = providers.environmentVariable("DockerHubPassword")
             )
         )
+    }
+}
+
+// The Ktor plugin builds images with Jib, and the Jib version it bundles cannot
+// parse an OCI image index:
+//
+//   Unknown mediaType: application/vnd.oci.image.index.v1+json
+//
+// eclipse-temurin:8-jre is now published as an OCI index, so every image build
+// fails against the plain tag. Pin the linux/amd64 manifest inside that index
+// instead. This backend only ever runs on amd64 App Service, so resolving the
+// platform here costs nothing.
+//
+// To move to a newer base image, re-resolve the digest with:
+//   docker manifest inspect eclipse-temurin:8-jre
+jib {
+    from {
+        image = "eclipse-temurin@sha256:0517e503352d136230732fe060bf78115597891162bc48bb4dc20cef0bf25eeb"
     }
 }
