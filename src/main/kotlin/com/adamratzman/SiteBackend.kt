@@ -34,9 +34,17 @@ var activityDistancesByWeek: SortedMap<WeekMonthYearPair, Map<SportType, Double>
 suspend fun main() {
     KomootApi.login()
     fixedRateTimer("Komoot Update", daemon = true, initialDelay = 0, period = 60.minutes.inWholeMilliseconds) {
-        runBlocking {
-            komootTours = KomootApi.getAllTours()
-            activityDistancesByWeek = computeActivityDistancesByWeek()
+        // java.util.Timer kills the whole timer thread if a task throws, which
+        // would silently stop every future refresh. Keep failures local so a
+        // transient Komoot error only skips one cycle.
+        runCatching {
+            runBlocking {
+                komootTours = KomootApi.getAllTours()
+                activityDistancesByWeek = computeActivityDistancesByWeek()
+            }
+        }.onFailure { throwable ->
+            System.err.println("Komoot refresh failed: ${throwable.message}")
+            throwable.printStackTrace()
         }
     }
 

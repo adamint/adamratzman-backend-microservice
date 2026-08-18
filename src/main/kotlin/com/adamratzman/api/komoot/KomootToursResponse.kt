@@ -194,7 +194,7 @@ data class Tour(
     @SerialName("elevation_down") val elevationDown: Double,
     @SerialName("elevation_up") val elevationUp: Double,
     @SerialName("_embedded") val embedded: EmbeddedX,
-    @SerialName("id") val id: Int,
+    @SerialName("id") val id: Long,
     @SerialName("kcal_active") val kcalActive: Int,
     @SerialName("kcal_resting") val kcalResting: Int,
     @SerialName("_links") val links: LinksX,
